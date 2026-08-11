@@ -4,14 +4,20 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Meu Assistente Financeiro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/css/style.css" />
 </head>
 <body>
   <div class="app">
-    <header class="app-header">
-      <div>
-        <h1>Meu Assistente Financeiro</h1>
-        <p class="subtitle">Painel mensal e modular — importe relatórios em PDF ou lance à mão. Tudo fica salvo só no seu navegador.</p>
+    <header class="letterhead">
+      <div class="brand">
+        <div class="brand-seal" aria-hidden="true">MF</div>
+        <div>
+          <h1>Meu Assistente Financeiro</h1>
+          <p class="subtitle">Painel mensal e modular — importe relatórios em PDF ou lance à mão. Tudo fica salvo só no seu navegador.</p>
+        </div>
       </div>
       <div class="month-nav">
         <button id="prev-month" class="icon-btn" aria-label="Mês anterior" type="button">‹</button>
@@ -21,6 +27,17 @@
     </header>
 
     <div id="month-chips" class="month-chips"></div>
+
+    <section class="hero-balance" id="hero-balance">
+      <span class="eyebrow" id="hero-eyebrow">Saldo do mês</span>
+      <div class="hero-value-row">
+        <span class="hero-value" id="hero-value">R$ 0,00</span>
+        <span class="hero-delta" id="hero-delta"></span>
+      </div>
+      <div class="hero-rule"></div>
+    </section>
+
+    <div class="statement-strip" id="summary-cards" aria-label="Receitas, despesas e investimentos do mês"></div>
 
     <section class="toolbar" aria-label="Ações">
       <button id="btn-new-tx" class="btn btn-primary" type="button">+ Novo lançamento</button>
@@ -34,20 +51,18 @@
       <button id="btn-clear-month" class="btn btn-danger-ghost" type="button">Limpar mês</button>
     </section>
 
-    <section class="summary-cards" id="summary-cards" aria-label="Resumo do mês"></section>
-
     <section class="charts-row">
-      <div class="card chart-card">
-        <h2>Despesas por categoria</h2>
+      <div class="panel chart-card">
+        <div class="panel-header"><span class="eyebrow">Despesas por categoria</span></div>
         <div id="donut-container"></div>
       </div>
-      <div class="card chart-card">
-        <h2>Receitas x despesas (últimos 6 meses)</h2>
+      <div class="panel chart-card">
+        <div class="panel-header"><span class="eyebrow">Receitas × despesas — últimos 6 meses</span></div>
         <div id="trend-container"></div>
       </div>
     </section>
 
-    <section class="card table-card">
+    <section class="panel table-card">
       <div class="table-toolbar">
         <input type="search" id="filter-text" placeholder="Buscar por descrição…" aria-label="Buscar por descrição" />
         <select id="filter-category" aria-label="Filtrar por categoria"></select>

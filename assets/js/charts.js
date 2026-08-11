@@ -193,11 +193,12 @@ function renderDivergingTrend(container, months) {
   // months: [{ month: 'YYYY-MM', label: 'jul/26', receitas, despesas (positivo) }]
   container.innerHTML = '';
   const dark = prefersDark();
-  const receitaColor = dark ? '#3987e5' : '#2a78d6';
-  const despesaColor = dark ? '#e66767' : '#e34948';
-  const gridColor = dark ? '#2c2c2a' : '#e1e0d9';
-  const baselineColor = dark ? '#383835' : '#c3c2b7';
-  const textColor = dark ? '#c3c2b7' : '#52514e';
+  // Verde/vermelho ecoa de propósito o vocabulário contábil ("estar no
+  // vermelho") — é o par divergente da marca, não a paleta categórica.
+  const receitaColor = dark ? '#3fae8c' : '#1f5c4a';
+  const despesaColor = dark ? '#e0707c' : '#8a2432';
+  const baselineColor = dark ? '#3a4250' : '#d8d4c8';
+  const textColor = dark ? '#aab2b8' : '#4b5560';
 
   if (months.length === 0) {
     const empty = document.createElement('p');

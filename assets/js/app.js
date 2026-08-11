@@ -42,6 +42,12 @@ function monthLabel(month) {
   return d.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }).replace('.', '');
 }
 
+function monthLabelLong(month) {
+  const [y, m] = month.split('-').map(Number);
+  const d = new Date(y, m - 1, 1);
+  return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+}
+
 function formatDateBR(iso) {
   const [y, m, d] = iso.split('-');
   return `${d}/${m}/${y}`;
@@ -90,22 +96,55 @@ function computeSummary(txs) {
   return { receitas, despesas, investimentos, transferencias, saldo: receitas + despesas };
 }
 
-function renderSummaryCards(txs) {
-  const s = computeSummary(txs);
+let heroRendered = false;
+
+function renderHero(month, s) {
+  const prevMonth = addMonths(month, -1);
+  const prevTxs = Store.forMonth(prevMonth);
+  const hero = document.getElementById('hero-balance');
+  const eyebrow = document.getElementById('hero-eyebrow');
+  const valueEl = document.getElementById('hero-value');
+  const deltaEl = document.getElementById('hero-delta');
+
+  eyebrow.textContent = `Saldo de ${monthLabelLong(month)}`;
+  valueEl.textContent = fmtBRL(s.saldo);
+  valueEl.className = `hero-value tone-${s.saldo >= 0 ? 'good' : 'bad'}`;
+
+  if (prevTxs.length === 0) {
+    deltaEl.textContent = '';
+  } else {
+    const prevSaldo = computeSummary(prevTxs).saldo;
+    const diff = s.saldo - prevSaldo;
+    const arrow = diff >= 0 ? '▲' : '▼';
+    const tone = diff >= 0 ? 'good' : 'bad';
+    const text = prevSaldo !== 0
+      ? `${(Math.abs(diff / prevSaldo) * 100).toFixed(1)}% vs ${monthLabel(prevMonth)}`
+      : `${fmtBRL(Math.abs(diff))} vs ${monthLabel(prevMonth)}`;
+    deltaEl.className = `hero-delta tone-${tone}`;
+    deltaEl.innerHTML = `<span class="arrow">${arrow}</span>${text}`;
+  }
+
+  hero.classList.remove('hero-reveal', 'hero-update');
+  // reflow para reiniciar a animação de entrada mesmo trocando só o texto
+  void hero.offsetWidth;
+  hero.classList.add(heroRendered ? 'hero-update' : 'hero-reveal');
+  heroRendered = true;
+}
+
+function renderStatementStrip(s) {
   const container = document.getElementById('summary-cards');
-  const cards = [
+  const stats = [
     { label: 'Receitas do mês', value: s.receitas, tone: 'good' },
     { label: 'Despesas do mês', value: s.despesas, tone: 'bad' },
-    { label: 'Saldo do mês', value: s.saldo, tone: s.saldo >= 0 ? 'good' : 'bad' },
     { label: 'Aportes em investimentos', value: s.investimentos, tone: 'neutral' },
   ];
   container.innerHTML = '';
-  for (const c of cards) {
+  for (const stat of stats) {
     const el = document.createElement('div');
-    el.className = 'card summary-card';
+    el.className = 'statement-stat';
     el.innerHTML = `
-      <span class="summary-label">${c.label}</span>
-      <span class="summary-value tone-${c.tone}">${fmtBRL(c.value)}</span>
+      <span class="eyebrow">${stat.label}</span>
+      <span class="statement-value tone-${stat.tone}">${fmtBRL(stat.value)}</span>
     `;
     container.appendChild(el);
   }
@@ -219,7 +258,9 @@ function refresh() {
   document.getElementById('month-input').value = state.month;
   renderMonthChips();
   const txs = Store.forMonth(state.month);
-  renderSummaryCards(txs);
+  const summary = computeSummary(txs);
+  renderHero(state.month, summary);
+  renderStatementStrip(summary);
   renderCharts(state.month, txs);
   renderTable(txs);
 }

@@ -8,15 +8,19 @@
  */
 
 // Ordem fixa dos grupos = ordem fixa das cores categóricas (nunca reordenar).
+// Paleta "cofre de família" (latão, esmeralda, orquídea, índigo, musgo, ameixa,
+// petróleo, cobre) validada com scripts/validate_palette.js do skill de
+// dataviz — todas as checagens de contraste e daltonismo (CVD) passam nos
+// dois modos com esta ordem exata.
 const GROUPS = [
-  { id: 'moradia', label: 'Moradia', color: '#2a78d6', colorDark: '#3987e5' },
-  { id: 'alimentacao', label: 'Alimentação', color: '#eb6834', colorDark: '#d95926' },
-  { id: 'transporte', label: 'Transporte', color: '#1baf7a', colorDark: '#199e70' },
-  { id: 'saude', label: 'Saúde', color: '#eda100', colorDark: '#c98500' },
-  { id: 'lazer', label: 'Lazer', color: '#e87ba4', colorDark: '#d55181' },
-  { id: 'assinaturas', label: 'Assinaturas', color: '#008300', colorDark: '#008300' },
-  { id: 'compras', label: 'Compras', color: '#4a3aa7', colorDark: '#9085e9' },
-  { id: 'outros', label: 'Outros', color: '#e34948', colorDark: '#e66767' },
+  { id: 'moradia', label: 'Moradia', color: '#a65f00', colorDark: '#bd7400' },
+  { id: 'alimentacao', label: 'Alimentação', color: '#008d59', colorDark: '#00a36d' },
+  { id: 'transporte', label: 'Transporte', color: '#af4387', colorDark: '#c6589c' },
+  { id: 'saude', label: 'Saúde', color: '#2171cc', colorDark: '#3986e4' },
+  { id: 'lazer', label: 'Lazer', color: '#677d00', colorDark: '#7b9300' },
+  { id: 'assinaturas', label: 'Assinaturas', color: '#8156c0', colorDark: '#966cd7' },
+  { id: 'compras', label: 'Compras', color: '#0087a4', colorDark: '#009dbb' },
+  { id: 'outros', label: 'Outros', color: '#bd4334', colorDark: '#d55948' },
 ];
 
 function groupById(id) {
