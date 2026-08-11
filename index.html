@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Meu Assistente Financeiro</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <div>
+        <h1>Meu Assistente Financeiro</h1>
+        <p class="subtitle">Painel mensal e modular — importe relatórios em PDF ou lance à mão. Tudo fica salvo só no seu navegador.</p>
+      </div>
+      <div class="month-nav">
+        <button id="prev-month" class="icon-btn" aria-label="Mês anterior" type="button">‹</button>
+        <input type="month" id="month-input" aria-label="Selecionar mês" />
+        <button id="next-month" class="icon-btn" aria-label="Próximo mês" type="button">›</button>
+      </div>
+    </header>
+
+    <div id="month-chips" class="month-chips"></div>
+
+    <section class="toolbar" aria-label="Ações">
+      <button id="btn-new-tx" class="btn btn-primary" type="button">+ Novo lançamento</button>
+      <button id="btn-import-pdf" class="btn" type="button">Importar relatório (PDF)</button>
+      <input type="file" id="file-pdf" accept="application/pdf" hidden />
+      <button id="btn-demo" class="btn btn-ghost" type="button">Carregar dados de exemplo</button>
+      <span class="toolbar-spacer"></span>
+      <button id="btn-export" class="btn btn-ghost" type="button">Exportar backup</button>
+      <button id="btn-import-json" class="btn btn-ghost" type="button">Restaurar backup</button>
+      <input type="file" id="file-json" accept="application/json" hidden />
+      <button id="btn-clear-month" class="btn btn-danger-ghost" type="button">Limpar mês</button>
+    </section>
+
+    <section class="summary-cards" id="summary-cards" aria-label="Resumo do mês"></section>
+
+    <section class="charts-row">
+      <div class="card chart-card">
+        <h2>Despesas por categoria</h2>
+        <div id="donut-container"></div>
+      </div>
+      <div class="card chart-card">
+        <h2>Receitas x despesas (últimos 6 meses)</h2>
+        <div id="trend-container"></div>
+      </div>
+    </section>
+
+    <section class="card table-card">
+      <div class="table-toolbar">
+        <input type="search" id="filter-text" placeholder="Buscar por descrição…" aria-label="Buscar por descrição" />
+        <select id="filter-category" aria-label="Filtrar por categoria"></select>
+        <select id="filter-flow" aria-label="Filtrar por tipo de fluxo">
+          <option value="">Todos os fluxos</option>
+          <option value="receita">Receitas</option>
+          <option value="despesa">Despesas</option>
+          <option value="transferencia">Transferências</option>
+          <option value="investimento">Investimentos</option>
+        </select>
+      </div>
+      <div class="table-scroll">
+        <table id="tx-table">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Descrição</th>
+              <th>Categoria</th>
+              <th>Conta</th>
+              <th class="num">Valor</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tx-tbody"></tbody>
+        </table>
+      </div>
+      <p id="tx-empty" class="chart-empty" hidden></p>
+    </section>
+
+    <footer class="app-footer">
+      <p>Os dados ficam salvos apenas no seu navegador (localStorage) — nada é enviado para servidores externos. Use "Exportar backup" para guardar uma cópia.</p>
+    </footer>
+  </div>
+
+  <dialog id="modal-tx">
+    <form id="form-tx">
+      <h2>Novo lançamento</h2>
+      <label>Data
+        <input type="date" id="tx-date" required />
+      </label>
+      <label>Descrição
+        <input type="text" id="tx-desc" required placeholder="Ex.: Mercado, Uber, salário…" />
+      </label>
+      <label>Categoria
+        <select id="tx-category"></select>
+      </label>
+      <label>Conta
+        <input type="text" id="tx-account" list="account-options" placeholder="Conta corrente, Cartão de crédito…" />
+      </label>
+      <datalist id="account-options">
+        <option value="Conta corrente"></option>
+        <option value="Cartão de crédito"></option>
+        <option value="Dinheiro"></option>
+      </datalist>
+      <label>Tipo
+        <select id="tx-sign">
+          <option value="despesa">Despesa (sai)</option>
+          <option value="receita">Receita (entra)</option>
+        </select>
+      </label>
+      <label>Valor (R$)
+        <input type="number" id="tx-amount" min="0" step="0.01" required placeholder="0,00" />
+      </label>
+      <div class="modal-actions">
+        <button type="button" id="tx-cancel" class="btn btn-ghost">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="modal-import">
+    <div class="modal-import-body">
+      <h2>Revisar importação</h2>
+      <p id="import-summary"></p>
+      <div class="table-scroll">
+        <table id="import-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Data</th>
+              <th>Descrição</th>
+              <th>Categoria</th>
+              <th class="num">Valor</th>
+            </tr>
+          </thead>
+          <tbody id="import-tbody"></tbody>
+        </table>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="import-cancel" class="btn btn-ghost">Cancelar</button>
+        <button type="button" id="import-confirm" class="btn btn-primary">Importar selecionados</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="assets/vendor/pdfjs/pdf.min.js"></script>
+  <script src="assets/js/categories.js"></script>
+  <script src="assets/js/parsers.js"></script>
+  <script src="assets/js/pdf-import.js"></script>
+  <script src="assets/js/storage.js"></script>
+  <script src="assets/js/charts.js"></script>
+  <script src="assets/js/demo-data.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
