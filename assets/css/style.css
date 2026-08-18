@@ -107,15 +107,8 @@ body {
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  border: 1px solid var(--accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: "Fraunces", serif;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--accent);
-  letter-spacing: 0.02em;
+  display: block;
+  object-fit: cover;
 }
 
 .brand h1 {
