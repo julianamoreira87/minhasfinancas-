@@ -106,7 +106,7 @@ body {
   flex: none;
   width: 42px;
   height: 42px;
-  border-radius: 50%;
+  border-radius: 10px;
   display: block;
   object-fit: cover;
 }
