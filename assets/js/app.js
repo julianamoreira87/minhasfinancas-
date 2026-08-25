@@ -517,26 +517,39 @@ function initFilters() {
 
 async function init() {
   const loading = document.getElementById('loading-state');
-  await Store.init();
-  if (loading) loading.hidden = true;
-  document.getElementById('app-root').hidden = false;
+  try {
+    await Store.init();
+    if (loading) loading.hidden = true;
+    document.getElementById('app-root').hidden = false;
 
-  if (!Store.online) {
-    alert('Não consegui conectar ao banco de dados agora — mostrando a última cópia salva neste navegador. Lançamentos novos só serão salvos quando a conexão voltar.');
-  }
+    if (!Store.online) {
+      alert('Não consegui conectar ao banco de dados agora — mostrando a última cópia salva neste navegador. Lançamentos novos só serão salvos quando a conexão voltar.\n\nDetalhe técnico: ' + (Store.lastError || ''));
+    }
 
-  state.month = pickInitialMonth();
-  initMonthNav();
-  initFilters();
-  initManualEntryModal();
-  initImportModal();
-  initMiscToolbar();
-  refresh();
+    state.month = pickInitialMonth();
+    initMonthNav();
+    initFilters();
+    initManualEntryModal();
+    initImportModal();
+    initMiscToolbar();
+    refresh();
 
-  if (window.matchMedia) {
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-      renderCharts(state.month, Store.forMonth(state.month));
-    });
+    if (window.matchMedia) {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        renderCharts(state.month, Store.forMonth(state.month));
+      });
+    }
+  } catch (err) {
+    // Nunca deixa a tela presa em "Carregando…" sem explicação — mostra o
+    // erro na própria página, pra dar pra mandar um print de algo útil.
+    console.error(err);
+    if (loading) {
+      loading.innerHTML = `
+        <span class="eyebrow">Meu Assistente Financeiro</span>
+        <p>Não consegui abrir o painel. Tente recarregar a página.</p>
+        <p style="font-size:0.75rem;opacity:0.7;max-width:60ch;text-align:center;">Detalhe técnico: ${(err && err.message) || err}</p>
+      `;
+    }
   }
 }
 

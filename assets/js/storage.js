@@ -32,18 +32,29 @@ function monthOf(dateStr) {
 
 let cache = [];
 
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`Tempo esgotado esperando ${label} (${ms / 1000}s).`)), ms)),
+  ]);
+}
+
 const Store = {
   online: true,
 
   // Busca tudo do banco e prepara o cache local. Chamar uma vez, no início.
+  // Nunca fica pendurado para sempre: se a conexão travar (rede ruim,
+  // bloqueio, etc.) em vez de responder com sucesso ou erro, um limite de
+  // tempo garante que a tela sempre avança para o modo offline.
   async init() {
     try {
-      await DB.init();
-      cache = await DB.fetchAllLancamentos();
+      await withTimeout(DB.init(), 10000, 'a conexão com o banco de dados');
+      cache = await withTimeout(DB.fetchAllLancamentos(), 10000, 'os lançamentos');
       saveOfflineCache(cache);
       this.online = true;
     } catch (err) {
       console.error('Não foi possível conectar ao banco de dados, usando última cópia salva neste navegador.', err);
+      this.lastError = err.message || String(err);
       cache = loadOfflineCache();
       this.online = false;
     }
