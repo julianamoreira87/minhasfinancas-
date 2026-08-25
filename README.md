@@ -1,10 +1,17 @@
 # Meu Assistente Financeiro
 
-Painel financeiro pessoal, mensal e modular, que roda inteiramente no navegador — sem
-servidor, sem conta, sem dados saindo da sua máquina. Foi construído para importar
-relatórios em PDF (fatura de cartão e extrato bancário) e também aceitar lançamentos
-manuais, categorizando tudo automaticamente para você acompanhar receitas, despesas
-e investimentos mês a mês.
+Painel financeiro pessoal, mensal e modular. A interface é HTML/CSS/JS puro (sem
+build, sem framework) e os lançamentos ficam guardados num banco de dados na nuvem
+(Supabase/Postgres) — abra o site em qualquer aparelho com o mesmo link e os dados
+estão lá. Foi construído para importar relatórios em PDF (fatura de cartão e extrato
+bancário) e também aceitar lançamentos manuais, categorizando tudo automaticamente
+para você acompanhar receitas, despesas e investimentos mês a mês.
+
+> **Sem login (por enquanto):** o site ainda não tem sistema de login/conta. Isso
+> significa que qualquer pessoa com o link do site consegue ver, editar e excluir os
+> lançamentos guardados no banco — não é privado. Se isso for um problema, é preciso
+> adicionar autenticação antes de compartilhar o link amplamente. Veja
+> `database/README.md` para mais detalhes.
 
 ## Como usar
 
@@ -20,10 +27,13 @@ e investimentos mês a mês.
    ajustes, o que não vier de um relatório).
 5. Navegue entre meses pelas setas, pelo seletor de mês ou pelos "chips" dos meses
    que já têm dados.
-6. Use **"Exportar backup"** de vez em quando para salvar um `.json` com tudo — é a
-   sua cópia de segurança, já que os dados vivem só no `localStorage` do navegador
-   (limpar o navegador apaga os lançamentos). **"Restaurar backup"** devolve os dados
-   a partir desse arquivo.
+6. Use **"Exportar backup"** de vez em quando para salvar um `.json` com tudo — é uma
+   cópia de segurança extra, independente do banco de dados. **"Restaurar backup"**
+   devolve os dados a partir desse arquivo (substituindo o que estiver salvo).
+
+Se o site abrir sem conexão com o banco de dados, ele mostra um aviso e cai para a
+última cópia salva neste navegador (modo offline) — lançamentos novos só são
+salvos de verdade quando a conexão volta.
 
 Os dois PDFs de exemplo em `samples/` são documentos fictícios ("Cartão Horizonte
 Mastercard" e "Banco Horizonte S.A."), criados para fins didáticos — sirva-se deles
@@ -46,8 +56,10 @@ para testar a importação sem arriscar dados reais.
 
 ## Arquitetura
 
-Tudo é HTML/CSS/JS puro (sem build step, sem framework, sem dependência de rede em
-tempo de execução) para ficar fácil de abrir, entender e estender:
+A interface é HTML/CSS/JS puro (sem build step, sem framework) para ficar fácil de
+abrir, entender e estender. Os dados ficam num banco Postgres gerenciado pelo
+Supabase — o app fala com ele direto do navegador, usando a chave pública do
+projeto (ver "Segurança" abaixo):
 
 ```
 index.html                    shell da página e dos modais
@@ -56,13 +68,28 @@ assets/js/
   categories.js                regras de categorização (MCC + palavras-chave) e grupos p/ gráfico
   parsers.js                   interpretação das linhas de texto do PDF -> lançamentos
   pdf-import.js                extração de texto do PDF via pdf.js (reconstrói linhas por posição x/y)
-  storage.js                   persistência em localStorage (CRUD de lançamentos)
+  db.js                        acesso ao banco de dados (Supabase): busca e grava lançamentos
+  storage.js                   cache em memória + fallback local, por cima de db.js (CRUD de lançamentos)
   charts.js                    donut (despesas por categoria) e barras divergentes (receita x despesa), em SVG puro
   demo-data.js                 dataset de exemplo (julho/2026)
   app.js                       estado da UI, renderização, formulários, wiring dos eventos
 assets/vendor/pdfjs/          pdf.js vendorizado (sem CDN externo)
+assets/vendor/supabase/       cliente supabase-js vendorizado (sem CDN externo)
+database/                     schema.sql, seed de dados e documentação do banco
 samples/                      os dois PDFs fictícios usados de base
 ```
+
+### Segurança: chave pública + RLS, sem login
+
+O app usa a chave **publishable/anon** do Supabase, feita para ficar em código de
+navegador — ela sozinha não dá acesso a nada. Quem decide o que é permitido são as
+políticas de RLS (Row Level Security) configuradas nas tabelas
+(`database/schema.sql`). Hoje essas políticas liberam leitura e escrita para
+qualquer visitante do site, porque **ainda não existe login** — é a forma mais
+simples de o app funcionar sem conta de usuário, mas tem uma consequência real:
+qualquer pessoa com o link consegue ver e alterar os lançamentos. Para restringir
+isso por usuário, o próximo passo seria adicionar Supabase Auth e trocar as
+políticas para checar `auth.uid()`.
 
 ### Formato interno de um lançamento
 

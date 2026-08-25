@@ -1,12 +1,10 @@
 -- Schema do banco de dados (Supabase/Postgres) do Meu Assistente Financeiro.
--- Espelha o modelo de dados usado hoje em assets/js/categories.js e
--- assets/js/storage.js (que ainda roda em localStorage, no navegador).
+-- Espelha o modelo de dados usado em assets/js/categories.js e é lido/gravado
+-- direto pelo site através de assets/js/db.js.
 --
--- Este banco existe como base para uma futura versão em nuvem do sistema;
--- o site publicado ainda guarda os dados só no navegador (localStorage),
--- então as tabelas abaixo ficam com RLS ligado e sem policy pública até
--- existir login de verdade — assim ninguém consegue ler/gravar nelas só
--- com o link do site.
+-- RLS fica ligado em todas as tabelas; as políticas que liberam acesso para a
+-- chave pública do site estão em policies.sql (aplicadas depois deste
+-- arquivo). Sem login ainda — ver database/README.md para o que isso significa.
 
 -- Grupos fixos usados no gráfico de despesas por categoria (cores e ordem
 -- consistentes, espelhando GROUPS em assets/js/categories.js).

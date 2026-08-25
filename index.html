@@ -11,7 +11,11 @@
   <link rel="stylesheet" href="assets/css/style.css" />
 </head>
 <body>
-  <div class="app">
+  <div id="loading-state" class="loading-state">
+    <span class="eyebrow">Meu Assistente Financeiro</span>
+    <p>Carregando seus dados…</p>
+  </div>
+  <div class="app" id="app-root" hidden>
     <header class="letterhead">
       <div class="brand">
         <img class="brand-seal" src="assets/images/logo.svg" alt="Logo Finance" width="42" height="42" />
@@ -94,7 +98,7 @@
     </section>
 
     <footer class="app-footer">
-      <p>Os dados ficam salvos apenas no seu navegador (localStorage) — nada é enviado para servidores externos. Use "Exportar backup" para guardar uma cópia.</p>
+      <p>Os dados ficam salvos num banco de dados na nuvem, acessível de qualquer aparelho com este link. Use "Exportar backup" de vez em quando para guardar uma cópia extra.</p>
     </footer>
   </div>
 
@@ -160,9 +164,11 @@
   </dialog>
 
   <script src="assets/vendor/pdfjs/pdf.min.js"></script>
+  <script src="assets/vendor/supabase/supabase.js"></script>
   <script src="assets/js/categories.js"></script>
   <script src="assets/js/parsers.js"></script>
   <script src="assets/js/pdf-import.js"></script>
+  <script src="assets/js/db.js"></script>
   <script src="assets/js/storage.js"></script>
   <script src="assets/js/charts.js"></script>
   <script src="assets/js/demo-data.js"></script>

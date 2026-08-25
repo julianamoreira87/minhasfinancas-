@@ -15,15 +15,24 @@ usa no site).
 | `contas` | De onde o dinheiro saiu/entrou: Conta corrente, Cartão de crédito, Dinheiro. |
 | `lancamentos` | Cada lançamento financeiro: data, descrição, valor, categoria, conta, se veio de PDF (fatura/extrato) ou foi digitado à mão. |
 
-## Importante: o site ainda não está ligado a este banco
+## O site está ligado a este banco (sem login)
 
-Hoje o painel publicado guarda os dados só no navegador de quem está usando
-(localStorage) — este banco de dados é a base para uma versão futura em
-nuvem, mas ainda não está conectado ao site.
+O painel publicado (`assets/js/db.js`) já lê e grava direto nestas tabelas, usando
+a chave pública do projeto. Isso foi um pedido explícito de quem mantém o site,
+ciente do que isso significa: **como ainda não existe login**, qualquer pessoa com
+o link do site consegue ver, criar, editar e excluir os lançamentos — não há
+separação por usuário.
 
-Isso é proposital: conectar o site a um banco de verdade, acessível pela
-internet, exige primeiro um sistema de login. Sem login, qualquer pessoa
-que abrisse o link do site poderia ver e apagar os lançamentos — por isso
-as tabelas estão com uma trava de segurança (RLS) ligada e sem nenhuma
-liberação pública ainda: ninguém consegue ler ou gravar nelas de fora,
-nem mesmo pelo site.
+As políticas de acesso (RLS) que permitem isso:
+
+| Tabela | Quem pode ler | Quem pode gravar |
+|---|---|---|
+| `grupos_categoria` | todo mundo (chave pública) | ninguém pelo site |
+| `categorias` | todo mundo (chave pública) | ninguém pelo site |
+| `contas` | todo mundo (chave pública) | todo mundo (só criar, para nomes de conta novos) |
+| `lancamentos` | todo mundo (chave pública) | todo mundo (criar, editar, excluir) |
+
+**Para restringir isso no futuro:** adicionar Supabase Auth (login por e-mail/senha
+ou provedor social), uma coluna `usuario_id` em `lancamentos`, e trocar as
+políticas acima para exigir `auth.uid() = usuario_id`. Até lá, trate o link do site
+como se fosse público.

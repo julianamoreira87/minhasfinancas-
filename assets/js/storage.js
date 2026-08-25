@@ -1,94 +1,114 @@
 /*
- * Persistência local (localStorage). Uma única lista de transações para
- * todos os meses; a UI agrupa por mês (campo `month`, formato 'YYYY-MM').
+ * Fonte de verdade dos lançamentos: o banco de dados (Supabase), acessado
+ * através de db.js. Guardamos os lançamentos já carregados numa lista em
+ * memória (`cache`) para que a tela possa ler dados na hora, sem esperar
+ * rede a cada clique — só as operações de gravação (`add`, `update`...)
+ * fazem uma chamada de rede, e cada uma delas atualiza o cache em seguida.
+ *
+ * Também espelhamos o cache no localStorage como uma cópia de reserva: se
+ * o navegador abrir sem internet, o app ainda mostra os últimos dados
+ * sincronizados (modo somente leitura, ver Store.online).
  */
 
-const STORAGE_KEY = 'financas:transactions:v1';
+const OFFLINE_CACHE_KEY = 'financas:cache:v1';
 
-function loadTransactions() {
+function loadOfflineCache() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const data = JSON.parse(raw);
+    const raw = localStorage.getItem(OFFLINE_CACHE_KEY);
+    const data = raw ? JSON.parse(raw) : [];
     return Array.isArray(data) ? data : [];
-  } catch (err) {
-    console.error('Falha ao ler dados salvos, iniciando vazio.', err);
+  } catch {
     return [];
   }
 }
 
-function saveTransactions(list) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-}
-
-function uid() {
-  return 'tx_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+function saveOfflineCache(list) {
+  try { localStorage.setItem(OFFLINE_CACHE_KEY, JSON.stringify(list)); } catch { /* localStorage indisponível: ignora */ }
 }
 
 function monthOf(dateStr) {
   return (dateStr || '').slice(0, 7);
 }
 
+let cache = [];
+
 const Store = {
+  online: true,
+
+  // Busca tudo do banco e prepara o cache local. Chamar uma vez, no início.
+  async init() {
+    try {
+      await DB.init();
+      cache = await DB.fetchAllLancamentos();
+      saveOfflineCache(cache);
+      this.online = true;
+    } catch (err) {
+      console.error('Não foi possível conectar ao banco de dados, usando última cópia salva neste navegador.', err);
+      cache = loadOfflineCache();
+      this.online = false;
+    }
+    return cache;
+  },
+
   all() {
-    return loadTransactions();
+    return cache;
   },
 
   forMonth(month) {
-    return loadTransactions()
-      .filter((t) => t.month === month)
-      .sort((a, b) => a.date.localeCompare(b.date));
+    return cache.filter((t) => t.month === month).sort((a, b) => a.date.localeCompare(b.date));
   },
 
   months() {
-    const set = new Set(loadTransactions().map((t) => t.month));
-    return Array.from(set).sort();
+    return Array.from(new Set(cache.map((t) => t.month))).sort();
   },
 
-  add(tx) {
-    const list = loadTransactions();
-    const full = { id: uid(), month: monthOf(tx.date), ...tx };
-    list.push(full);
-    saveTransactions(list);
-    return full;
+  async add(tx) {
+    const saved = await DB.insertLancamento(tx);
+    cache.push(saved);
+    saveOfflineCache(cache);
+    return saved;
   },
 
-  addMany(txs) {
-    const list = loadTransactions();
-    const added = txs.map((tx) => ({ id: uid(), month: monthOf(tx.date), ...tx }));
-    saveTransactions(list.concat(added));
-    return added;
+  async addMany(txs) {
+    const saved = await DB.insertManyLancamentos(txs);
+    cache = cache.concat(saved);
+    saveOfflineCache(cache);
+    return saved;
   },
 
-  update(id, patch) {
-    const list = loadTransactions();
-    const idx = list.findIndex((t) => t.id === id);
-    if (idx === -1) return null;
-    const updated = { ...list[idx], ...patch };
-    if (patch.date) updated.month = monthOf(patch.date);
-    list[idx] = updated;
-    saveTransactions(list);
-    return updated;
+  async update(id, patch) {
+    await DB.updateLancamento(id, patch);
+    const idx = cache.findIndex((t) => t.id === id);
+    if (idx !== -1) {
+      const updated = { ...cache[idx], ...patch };
+      if (patch.date) updated.month = monthOf(patch.date);
+      cache[idx] = updated;
+      saveOfflineCache(cache);
+      return updated;
+    }
+    return null;
   },
 
-  remove(id) {
-    const list = loadTransactions().filter((t) => t.id !== id);
-    saveTransactions(list);
+  async remove(id) {
+    await DB.removeLancamento(id);
+    cache = cache.filter((t) => t.id !== id);
+    saveOfflineCache(cache);
   },
 
-  clearMonth(month) {
-    const list = loadTransactions().filter((t) => t.month !== month);
-    saveTransactions(list);
+  async clearMonth(month) {
+    await DB.clearMonthLancamentos(month);
+    cache = cache.filter((t) => t.month !== month);
+    saveOfflineCache(cache);
   },
 
-  replaceAll(list) {
-    saveTransactions(list);
+  async replaceAll(list) {
+    const saved = await DB.replaceAllLancamentos(list);
+    cache = saved;
+    saveOfflineCache(cache);
   },
 
   // Evita importar o mesmo lançamento duas vezes (mesma data+descrição+valor+conta).
   existingFingerprints() {
-    return new Set(
-      loadTransactions().map((t) => `${t.date}|${t.description}|${t.amount}|${t.account}`)
-    );
+    return new Set(cache.map((t) => `${t.date}|${t.description}|${t.amount}|${t.account}`));
   },
 };

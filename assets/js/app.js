@@ -209,9 +209,15 @@ function renderTable(allTxs) {
     catSelect.className = 'inline-select';
     populateCategorySelect(catSelect);
     catSelect.value = t.category;
-    catSelect.addEventListener('change', () => {
-      Store.update(t.id, { category: catSelect.value });
-      refresh();
+    catSelect.addEventListener('change', async () => {
+      catSelect.disabled = true;
+      try {
+        await Store.update(t.id, { category: catSelect.value });
+        refresh();
+      } catch (err) {
+        alert('Não foi possível salvar a categoria: ' + err.message);
+        catSelect.disabled = false;
+      }
     });
     tdCat.appendChild(catSelect);
 
@@ -228,10 +234,13 @@ function renderTable(allTxs) {
     delBtn.className = 'row-action';
     delBtn.setAttribute('aria-label', 'Excluir lançamento');
     delBtn.textContent = '✕';
-    delBtn.addEventListener('click', () => {
-      if (confirm(`Excluir o lançamento "${t.description}"?`)) {
-        Store.remove(t.id);
+    delBtn.addEventListener('click', async () => {
+      if (!confirm(`Excluir o lançamento "${t.description}"?`)) return;
+      try {
+        await Store.remove(t.id);
         refresh();
+      } catch (err) {
+        alert('Não foi possível excluir: ' + err.message);
       }
     });
     tdActions.appendChild(delBtn);
@@ -286,7 +295,7 @@ function initManualEntryModal() {
   });
   document.getElementById('tx-cancel').addEventListener('click', () => modal.close());
 
-  form.addEventListener('submit', (evt) => {
+  form.addEventListener('submit', async (evt) => {
     evt.preventDefault();
     const date = document.getElementById('tx-date').value;
     const description = document.getElementById('tx-desc').value.trim();
@@ -296,9 +305,17 @@ function initManualEntryModal() {
     const rawAmount = parseFloat(document.getElementById('tx-amount').value);
     if (!date || !description || Number.isNaN(rawAmount)) return;
     const amount = sign === 'despesa' ? -Math.abs(rawAmount) : Math.abs(rawAmount);
-    Store.add({ date, description, category, account, amount, source: 'manual' });
-    modal.close();
-    setMonth(monthOfDate(date));
+    const submitBtn = form.querySelector('button[type=submit]');
+    submitBtn.disabled = true;
+    try {
+      await Store.add({ date, description, category, account, amount, source: 'manual' });
+      modal.close();
+      setMonth(monthOfDate(date));
+    } catch (err) {
+      alert('Não foi possível salvar o lançamento: ' + err.message);
+    } finally {
+      submitBtn.disabled = false;
+    }
   });
 }
 
@@ -334,7 +351,8 @@ function initImportModal() {
   });
 
   document.getElementById('import-cancel').addEventListener('click', () => modal.close());
-  document.getElementById('import-confirm').addEventListener('click', () => {
+  const confirmBtn = document.getElementById('import-confirm');
+  confirmBtn.addEventListener('click', async () => {
     const rows = Array.from(document.querySelectorAll('#import-tbody tr'));
     const toAdd = [];
     rows.forEach((row, i) => {
@@ -344,12 +362,18 @@ function initImportModal() {
         toAdd.push({ ...pendingImport[i], category: catSelect.value });
       }
     });
-    if (toAdd.length) {
-      Store.addMany(toAdd);
+    if (toAdd.length === 0) { modal.close(); return; }
+    confirmBtn.disabled = true;
+    try {
+      await Store.addMany(toAdd);
       const months = new Set(toAdd.map((t) => monthOfDate(t.date)));
       setMonth(Array.from(months).sort().pop());
+      modal.close();
+    } catch (err) {
+      alert('Não foi possível importar: ' + err.message);
+    } finally {
+      confirmBtn.disabled = false;
     }
-    modal.close();
   });
 }
 
@@ -406,15 +430,22 @@ function openImportPreview(result) {
 // --- Toolbar: demo data, backup, clear --------------------------------------
 
 function initMiscToolbar() {
-  document.getElementById('btn-demo').addEventListener('click', () => {
+  document.getElementById('btn-demo').addEventListener('click', async (evt) => {
     const existing = Store.existingFingerprints();
     const toAdd = DEMO_TRANSACTIONS.filter((t) => !existing.has(`${t.date}|${t.description}|${t.amount}|${t.account}`));
     if (toAdd.length === 0) {
       alert('Os dados de exemplo já estão carregados.');
       return;
     }
-    Store.addMany(toAdd);
-    setMonth('2026-07');
+    evt.target.disabled = true;
+    try {
+      await Store.addMany(toAdd);
+      setMonth('2026-07');
+    } catch (err) {
+      alert('Não foi possível carregar os dados de exemplo: ' + err.message);
+    } finally {
+      evt.target.disabled = false;
+    }
   });
 
   document.getElementById('btn-export').addEventListener('click', () => {
@@ -437,7 +468,7 @@ function initMiscToolbar() {
       const data = JSON.parse(await file.text());
       if (!Array.isArray(data)) throw new Error('Formato inválido');
       if (!confirm(`Restaurar backup vai SUBSTITUIR todos os ${Store.all().length} lançamentos salvos por ${data.length} do arquivo. Continuar?`)) return;
-      Store.replaceAll(data);
+      await Store.replaceAll(data);
       state.month = pickInitialMonth();
       refresh();
     } catch (err) {
@@ -445,12 +476,15 @@ function initMiscToolbar() {
     }
   });
 
-  document.getElementById('btn-clear-month').addEventListener('click', () => {
+  document.getElementById('btn-clear-month').addEventListener('click', async () => {
     const count = Store.forMonth(state.month).length;
     if (count === 0) return;
-    if (confirm(`Excluir os ${count} lançamentos de ${monthLabel(state.month)}? Essa ação não pode ser desfeita.`)) {
-      Store.clearMonth(state.month);
+    if (!confirm(`Excluir os ${count} lançamentos de ${monthLabel(state.month)}? Essa ação não pode ser desfeita.`)) return;
+    try {
+      await Store.clearMonth(state.month);
       refresh();
+    } catch (err) {
+      alert('Não foi possível limpar o mês: ' + err.message);
     }
   });
 }
@@ -481,7 +515,16 @@ function initFilters() {
 
 // --- Init --------------------------------------------------------------------
 
-function init() {
+async function init() {
+  const loading = document.getElementById('loading-state');
+  await Store.init();
+  if (loading) loading.hidden = true;
+  document.getElementById('app-root').hidden = false;
+
+  if (!Store.online) {
+    alert('Não consegui conectar ao banco de dados agora — mostrando a última cópia salva neste navegador. Lançamentos novos só serão salvos quando a conexão voltar.');
+  }
+
   state.month = pickInitialMonth();
   initMonthNav();
   initFilters();
